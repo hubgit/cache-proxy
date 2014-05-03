@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 $url = $_GET['url'];
-$file = __DIR__ . '/../app/data/cache/' . hash('sha256', $url);
+$file = __DIR__ . '/cache/' . hash('sha256', $url);
 
 if (!file_exists($file) || !file_exists($file . '.json')) {
   $headers = getallheaders();
