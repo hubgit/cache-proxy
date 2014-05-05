@@ -54,7 +54,7 @@ header('Content-Type: ' . $info['content_type']);
 
 readfile($file);
 
-function readHostConfig($url) {
+function readConfig($url) {
   $configFile = __DIR__ . '/config.json';
 
   if (!file_exists($configFile)) {
