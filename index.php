@@ -15,7 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 $url = $_GET['url'];
 $file = __DIR__ . '/cache/' . hash('sha256', $url);
 
+// TODO: watch for skip-cache request header (e.g. retries)
 if (!file_exists($file) || !file_exists($file . '.json')) {
+  /* pass through request headers */
   $headers = getallheaders();
 
   $requestHeaders = array_map(function($value, $key) {
@@ -24,24 +26,21 @@ if (!file_exists($file) || !file_exists($file . '.json')) {
     }
   }, $headers, array_keys($headers));
 
-  $output = fopen($file, 'w');
-
+  /* request host */
   $host = parse_url($url, PHP_URL_HOST);
 
-  switch ($host) {
-    // TODO: match against authorisers from JSON
-    case 'api.twitter.com':
-      $client = new OAuthClient;
+  /* host configuration */
+  $config = readHostConfig($host);
 
-      $auth = parse_ini_file(getenv('HOME') . '/.config/twitter.ini');
-      $auth['token_url'] = 'https://api.twitter.com/oauth2/token';
-      $requestHeaders[] = $client->authorizationHeader($auth);
-      break;
-
-    default:
-      $client = new CurlClient;
-      break;
+  if (is_array($config['oauth'])) {
+    $client = new OAuthClient;
+    $requestHeaders[] = $client->authorizationHeader($config['oauth']);
+  } else {
+    $client = new CurlClient;
   }
+
+  /* output file */
+  $output = fopen($file, 'w');
 
   // TODO: catch exceptions
   $info = $client->get($url, array(), $requestHeaders, $output);
@@ -57,29 +56,15 @@ header('Content-Type: ' . $info['content_type']);
 //header('Content-Length: ' . filesize($file));
 
 readfile($file);
-exit();
 
-function fetch($url, $output) {
-  $headers = getallheaders();
+function readHostConfig($host) {
+  $configFile = __DIR__ . '/config.json';
 
-  $requestHeaders = array_map(function($value, $key) {
-    if (!in_array($key, array('Origin', 'Referer', 'Connection', 'Host'))) {
-      return $key . ':' . $value;
-    }
-  }, $headers, array_keys($headers));
+  if (!file_exists($configFile)) {
+    return null;
+  }
 
-  curl_setopt($curl, CURLOPT_HTTPHEADER, $requestHeaders);
+  $configs = json_decode(file_get_contents($configFile), true);
 
-
-  $curl = curl_init($url);
-  curl_setopt($curl, CURLOPT_VERBOSE, true);
-  curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
-  curl_setopt($curl, CURLOPT_ENCODING, '');
-  curl_setopt($curl, CURLOPT_FILE, $output);
-  curl_exec($curl);
-  $info = curl_getinfo($curl);
-  curl_close($curl);
-  fclose($output);
-
-  return $info;
+  return isset($configs[$host]) ? $configs[$host] : null;
 }

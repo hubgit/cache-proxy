@@ -50,7 +50,7 @@ class CurlClient
             $url .= '?' . http_build_query($params);
         }
 
-        file_put_contents('php://stderr', sprintf("Fetching %s\n", $url));
+        $this->report(sprintf('Fetching %s', $url));
 
         curl_setopt_array($this->curl, array(
             CURLOPT_URL => $url,
@@ -118,12 +118,16 @@ class CurlClient
             $delay = 60; // 1 minute delay
         }
 
-        file_put_contents('php://stderr', "\n");
+        $this->report();
 
         do {
-            file_put_contents('php://stderr', "\r\e[K");
-            file_put_contents('php://stderr', sprintf('Sleeping for %d seconds', $delay--));
+            $this->report("\r\e[K", null);
+            $this->report(sprintf('Sleeping for %d seconds', $delay--), null);
             sleep(1);
         } while ($delay);
+    }
+
+    protected function report($output = '', $suffix = "\n") {
+        file_put_contents('php://stderr', $output . $suffix);
     }
 }
