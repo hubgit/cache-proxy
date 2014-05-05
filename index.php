@@ -26,11 +26,8 @@ if (!file_exists($file) || !file_exists($file . '.json')) {
     }
   }, $headers, array_keys($headers));
 
-  /* request host */
-  $host = parse_url($url, PHP_URL_HOST);
-
   /* host configuration */
-  $config = readHostConfig($host);
+  $config = readConfig($url);
 
   if (is_array($config['oauth'])) {
     $client = new OAuthClient;
@@ -57,7 +54,7 @@ header('Content-Type: ' . $info['content_type']);
 
 readfile($file);
 
-function readHostConfig($host) {
+function readHostConfig($url) {
   $configFile = __DIR__ . '/config.json';
 
   if (!file_exists($configFile)) {
@@ -65,6 +62,8 @@ function readHostConfig($host) {
   }
 
   $configs = json_decode(file_get_contents($configFile), true);
+
+  $host = parse_url($url, PHP_URL_HOST);
 
   return isset($configs[$host]) ? $configs[$host] : null;
 }
