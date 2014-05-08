@@ -24,7 +24,7 @@ $url = $_GET['url'];
 $file = __DIR__ . '/cache/' . hash('sha256', $url);
 
 // TODO: watch for skip-cache request header (e.g. retries)
-if (!file_exists($file) || !file_exists($file . '.json')) {
+if (!file_exists($file) || !file_exists($file . '.json') || !filesize($file)) {
   /* pass through request headers */
   $headers = getallheaders();
 
@@ -55,10 +55,27 @@ if (!file_exists($file) || !file_exists($file . '.json')) {
 
 $info = json_decode(file_get_contents($file . '.json'), true);
 
+$exposedHeaders = array(
+  'link',
+  'x-ratelimit-limit',
+  'x-ratelimit-remaining',
+  'x-ratelimit-reset',
+  'x-rate-limit-limit',
+  'x-rate-limit-remaining',
+  'x-rate-limit-reset',
+);
+
 http_response_code($info['http_code']);
 header('Access-Control-Allow-Origin: *');
+header('Access-Control-Expose-Headers: ' . implode(', ', $exposedHeaders));
 header('Content-Type: ' . $info['content_type']);
 //header('Content-Length: ' . filesize($file));
+
+foreach ($info['headers'] as $key => $value) {
+  if (in_array($key, $exposedHeaders)) {
+    header($key . ': ' . $value);
+  }
+}
 
 readfile($file);
 

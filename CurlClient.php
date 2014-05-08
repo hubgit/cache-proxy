@@ -59,7 +59,11 @@ class CurlClient
 
         $result = curl_exec($this->curl);
 
-        return curl_getinfo($this->curl);
+        $info = curl_getinfo($this->curl);
+
+        $info['headers'] = $this->headers;
+
+        return $info;
     }
 
     /**
