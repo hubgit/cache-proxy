@@ -79,7 +79,16 @@ class CurlClient
 
         if (isset($parts[1])) {
             list($name, $value) = $parts;
-            $this->headers[strtolower($name)] = $value;
+
+            $name = strtolower($name);
+            $value = rtrim($value);
+
+            if (isset($this->headers[$name])) {
+                // append multiple headers with a comma separator
+                $this->headers[$name] .= ', ' . $value;
+            } else {
+                $this->headers[$name] = $value;
+            }
         }
 
         return strlen($header);
