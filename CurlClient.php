@@ -61,6 +61,10 @@ class CurlClient
 
         $info = curl_getinfo($this->curl);
 
+        // remove local details
+        unset($info['local_ip']);
+        unset($info['local_port']);
+
         $info['headers'] = $this->headers;
 
         return $info;
