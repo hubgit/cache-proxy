@@ -45,15 +45,18 @@ if (!file_exists($file) || !file_exists($file . '.json') || !filesize($file)) {
   }
 
   /* output file */
-  $output = fopen($file, 'w');
+  $output = gzopen($file, 'w');
 
   // TODO: catch exceptions
   $info = $client->get($url, $requestHeaders, $output);
+
+  gzclose($output);
 
   file_put_contents($file . '.json', json_encode($info, JSON_PRETTY_PRINT));
 }
 
 $info = json_decode(file_get_contents($file . '.json'), true);
+
 
 $exposedHeaders = array(
   'link',
@@ -77,7 +80,12 @@ foreach ($info['headers'] as $key => $value) {
   }
 }
 
-readfile($file);
+// remove the response file on failure. TODO: something better?
+if ($info['http_code'] >= 300) {
+  unlink($file);
+}
+
+readfile('compress.zlib://' . $file);
 
 function readConfig($url) {
   $configFile = __DIR__ . '/config.json';
