@@ -5,11 +5,19 @@ require 'OAuthClient.php';
 
 // TODO: handle or reject relative and non-HTTP(S) URLs
 
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-  header('Access-Control-Allow-Origin: *');
-  header('Access-Control-Allow-Methods: GET, OPTIONS');
-  header('Access-Control-Allow-Headers: accept, x-requested-with, content-type');
-  exit();
+switch ($_SERVER['REQUEST_METHOD']) {
+  case 'OPTIONS':
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: GET, OPTIONS');
+    header('Access-Control-Allow-Headers: accept, x-requested-with, content-type');
+    exit();
+
+  case 'GET':
+    break; // allowed
+
+  default:
+    http_status_code(406); // not allowed
+    exit();
 }
 
 $url = $_GET['url'];
@@ -40,7 +48,7 @@ if (!file_exists($file) || !file_exists($file . '.json')) {
   $output = fopen($file, 'w');
 
   // TODO: catch exceptions
-  $info = $client->get($url, array(), $requestHeaders, $output);
+  $info = $client->get($url, $requestHeaders, $output);
 
   file_put_contents($file . '.json', json_encode($info, JSON_PRETTY_PRINT));
 }

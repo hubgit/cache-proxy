@@ -44,12 +44,8 @@ class CurlClient
      * @return bool|mixed
      * @throws Exception
      */
-    public function get($url, $params = array(), $headers = array(), $file = null, $tries = 0)
+    public function get($url, $headers = array(), $file = null, $tries = 0)
     {
-        if (!empty($params)) {
-            $url .= '?' . http_build_query($params);
-        }
-
         $this->report(sprintf('Fetching %s', $url));
 
         curl_setopt_array($this->curl, array(
@@ -58,28 +54,12 @@ class CurlClient
             CURLOPT_FILE => is_null($file) ? STDOUT : $file, // STDOUT if no file
         ));
 
+        // reset the headers array
         $this->headers = array();
+
         $result = curl_exec($this->curl);
-        $info = curl_getinfo($this->curl);
 
-        switch ($info['http_code']) {
-            case 200:
-                return is_null($file) ? $result : $info;
-
-            case 429: // rate limit
-                if ($tries == 5) {
-                    throw new Exception('Rate limited too many times');
-                }
-
-                $this->delay();
-
-                return $this->get($url, array(), $headers, $file, ++$tries);
-
-            default:
-                $message = sprintf('Response not OK: %d %s', $info['http_code'], $result);
-
-                throw new Exception($message);
-        }
+        return curl_getinfo($this->curl);
     }
 
     /**
@@ -102,31 +82,8 @@ class CurlClient
     }
 
     /**
-     * Delay if rate limit is reached
+     * Output messages to stderr
      */
-    protected function delay()
-    {
-        if (isset($this->headers['x-rate-limit-reset'])) {
-            $delay = $this->headers['x-rate-limit-reset'] - time();
-
-            if ($delay < 10) {
-                $delay = 60 * 15; // 15 minute delay if the given delay seems unreasonably small (can be due to server time differences)
-            }
-        } else {
-            //exit('Rate limited, but no rate limit header found');
-            // http://developer.echonest.com/docs/v4/index.html#rate-limits
-            $delay = 60; // 1 minute delay
-        }
-
-        $this->report();
-
-        do {
-            $this->report("\r\e[K", null);
-            $this->report(sprintf('Sleeping for %d seconds', $delay--), null);
-            sleep(1);
-        } while ($delay);
-    }
-
     protected function report($output = '', $suffix = "\n") {
         file_put_contents('php://stderr', $output . $suffix);
     }
