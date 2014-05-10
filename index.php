@@ -57,7 +57,6 @@ if (!file_exists($file) || !file_exists($file . '.json') || !filesize($file)) {
 
 $info = json_decode(file_get_contents($file . '.json'), true);
 
-
 $exposedHeaders = array(
   'link',
   'x-ratelimit-limit',
@@ -83,6 +82,7 @@ foreach ($info['headers'] as $key => $value) {
 // remove the response file on failure. TODO: something better?
 if ($info['http_code'] >= 300) {
   unlink($file);
+  exit();
 }
 
 readfile('compress.zlib://' . $file);
