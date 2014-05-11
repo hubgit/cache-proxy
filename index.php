@@ -9,7 +9,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
   case 'OPTIONS':
     header('Access-Control-Allow-Origin: *');
     header('Access-Control-Allow-Methods: GET, OPTIONS');
-    header('Access-Control-Allow-Headers: accept, x-requested-with, content-type');
+    header('Access-Control-Allow-Headers: accept, x-requested-with, content-type, vege-cache-control');
     exit();
 
   case 'GET':
@@ -23,13 +23,16 @@ switch ($_SERVER['REQUEST_METHOD']) {
 $url = $_GET['url'];
 $file = __DIR__ . '/cache/' . hash('sha256', $url);
 
-// TODO: watch for skip-cache request header (e.g. retries)
-if (!file_exists($file) || !file_exists($file . '.json') || !filesize($file)) {
-  /* pass through request headers */
-  $headers = getallheaders();
+$headers = getallheaders();
 
+$nocache = isset($headers['Vege-Cache-Control']) && ($headers['Vege-Cache-Control'] == 'no-cache');
+
+if ($nocache || (!file_exists($file) || !file_exists($file . '.json') || !filesize($file))) {
+  /* pass through request headers */
   $requestHeaders = array_map(function($value, $key) {
-    if (!in_array($key, array('Origin', 'Referer', 'Connection', 'Host'))) {
+    $key = strtolower($key);
+
+    if (!in_array($key, array('origin', 'referer', 'connection', 'host', 'vege-cache-control'))) {
       return $key . ':' . $value;
     }
   }, $headers, array_keys($headers));
