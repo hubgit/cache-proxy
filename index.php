@@ -37,11 +37,15 @@ if (!file_exists($file) || !file_exists($file . '.json') || !filesize($file)) {
   /* host configuration */
   $config = readConfig($url);
 
-  if (is_array($config['oauth'])) {
+  if (isset($config['oauth'])) {
     $client = new OAuthClient;
     $requestHeaders[] = $client->authorizationHeader($config['oauth']);
   } else {
     $client = new CurlClient;
+  }
+
+  if (isset($config['params'])) {
+    $url .= (strpos($url, '?') === false ? '?' : '&') . http_build_query($config['params']);
   }
 
   /* output file */
