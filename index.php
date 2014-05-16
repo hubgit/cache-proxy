@@ -21,7 +21,8 @@ switch ($_SERVER['REQUEST_METHOD']) {
 }
 
 $url = $_GET['url'];
-$file = __DIR__ . '/cache/' . hash('sha256', $url);
+
+$file = buildFilePath($url);
 
 $headers = getallheaders();
 
@@ -33,7 +34,7 @@ if ($nocache || (!file_exists($file) || !file_exists($file . '.json') || !filesi
     $key = strtolower($key);
 
     if (!in_array($key, array('origin', 'referer', 'connection', 'host', 'vege-cache-control'))) {
-      return $key . ':' . $value;
+      return $key . ': ' . $value;
     }
   }, $headers, array_keys($headers));
 
@@ -106,4 +107,24 @@ function readConfig($url) {
   $host = parse_url($url, PHP_URL_HOST);
 
   return isset($configs[$host]) ? $configs[$host] : null;
+}
+
+function buildFilePath($url) {
+  $parts = parse_url($url);
+
+  $host = $parts['host'];
+
+  if ($parts['port']) {
+    $host .= '-' . $parts['port'];
+  }
+
+  $host = preg_replace('/[^\w\.]/', '-', $host);
+
+  $dir = __DIR__ . '/cache/' . $host;
+
+  if (!file_exists($dir)) {
+    mkdir($dir, 0700, true);
+  }
+
+  return $dir . '/' . hash('sha256', $url);
 }
