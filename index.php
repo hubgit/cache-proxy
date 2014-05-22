@@ -3,16 +3,19 @@
 require 'CurlClient.php';
 require 'OAuthClient.php';
 
+$method = $_SERVER['REQUEST_METHOD'];
+
 // TODO: handle or reject relative and non-HTTP(S) URLs
 
-switch ($_SERVER['REQUEST_METHOD']) {
+switch ($method) {
   case 'OPTIONS':
     header('Access-Control-Allow-Origin: *');
     header('Access-Control-Allow-Methods: GET, OPTIONS');
-    header('Access-Control-Allow-Headers: accept, x-requested-with, content-type, vege-cache-control');
+    header('Access-Control-Allow-Headers: accept, x-requested-with, content-type, vege-cache-control, vege-follow');
     exit();
 
   case 'GET':
+  case 'HEAD':
     break; // allowed
 
   default:
@@ -22,7 +25,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 
 $url = $_GET['url'];
 
-$file = buildFilePath($url);
+$file = buildFilePath($method, $url);
 
 $headers = getallheaders();
 
@@ -33,7 +36,7 @@ if ($nocache || (!file_exists($file) || !file_exists($file . '.json') || !filesi
   $requestHeaders = array_map(function($value, $key) {
     $key = strtolower($key);
 
-    if (!in_array($key, array('origin', 'referer', 'connection', 'host', 'vege-cache-control'))) {
+    if (!in_array($key, array('origin', 'referer', 'connection', 'host', 'accept-encoding', 'dnt', 'vege-cache-control', 'vege-follow'))) {
       return $key . ': ' . $value;
     }
   }, $headers, array_keys($headers));
@@ -52,6 +55,10 @@ if ($nocache || (!file_exists($file) || !file_exists($file . '.json') || !filesi
     $url .= (strpos($url, '?') === false ? '?' : '&') . http_build_query($config['params']);
   }
 
+  if ($method === 'HEAD') {
+    curl_setopt($client->curl, CURLOPT_FOLLOWLOCATION, false);
+  }
+
   /* output file */
   $output = gzopen($file, 'w');
 
@@ -67,6 +74,8 @@ $info = json_decode(file_get_contents($file . '.json'), true);
 
 $exposedHeaders = array(
   'link',
+  'x-status',
+  'x-location',
   'x-ratelimit-limit',
   'x-ratelimit-remaining',
   'x-ratelimit-reset',
@@ -75,10 +84,18 @@ $exposedHeaders = array(
   'x-rate-limit-reset',
 );
 
-http_response_code($info['http_code']);
+if ($info['redirect_url']) {
+  header('x-status: ' . $info['http_code']);
+  header('x-location: ' . $info['redirect_url']);
+  http_response_code(204);
+} else {
+  http_response_code($info['http_code']);
+  header('Content-Type: ' . $info['content_type']);
+}
+
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Expose-Headers: ' . implode(', ', $exposedHeaders));
-header('Content-Type: ' . $info['content_type']);
+
 //header('Content-Length: ' . filesize($file));
 
 foreach ($info['headers'] as $key => $value) {
@@ -88,12 +105,14 @@ foreach ($info['headers'] as $key => $value) {
 }
 
 // remove the response file on failure. TODO: something better?
-if ($info['http_code'] >= 300) {
+if ($info['http_code'] >= 400) {
   unlink($file);
   exit();
 }
 
-readfile('compress.zlib://' . $file);
+if ($method === 'GET') {
+  readfile('compress.zlib://' . $file);
+}
 
 function readConfig($url) {
   $configFile = __DIR__ . '/config.json';
@@ -109,18 +128,18 @@ function readConfig($url) {
   return isset($configs[$host]) ? $configs[$host] : null;
 }
 
-function buildFilePath($url) {
+function buildFilePath($method, $url) {
   $parts = parse_url($url);
 
   $host = $parts['host'];
 
-  if ($parts['port']) {
+  if (isset($parts['port'])) {
     $host .= '-' . $parts['port'];
   }
 
   $host = preg_replace('/[^\w\.]/', '-', $host);
 
-  $dir = __DIR__ . '/cache/' . $host;
+  $dir = __DIR__ . '/cache/' . $host . '/' . $method;
 
   if (!file_exists($dir)) {
     mkdir($dir, 0700, true);
