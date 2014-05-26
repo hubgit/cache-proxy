@@ -10,12 +10,15 @@ $method = $_SERVER['REQUEST_METHOD'];
 switch ($method) {
   case 'OPTIONS':
     header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: GET, OPTIONS');
+    header('Access-Control-Allow-Methods: GET, HEAD, POST, DELETE, OPTIONS');
     header('Access-Control-Allow-Headers: accept, x-requested-with, content-type, vege-cache-control, vege-follow');
     exit();
 
   case 'GET':
   case 'HEAD':
+  case 'POST':
+  case 'PUT':
+  case 'DELETE':
     break; // allowed
 
   default:
@@ -55,8 +58,30 @@ if ($nocache || (!file_exists($file) || !file_exists($file . '.json') || !filesi
     $url .= (strpos($url, '?') === false ? '?' : '&') . http_build_query($config['params']);
   }
 
-  if ($method === 'HEAD') {
+  if (isset($config['headers'])) {
+    foreach ($config['headers'] as $key => $value) {
+      $requestHeaders[] = $key . ': ' . $value;
+    }
+  }
+
+  switch ($method) {
+    case 'HEAD':
+    curl_setopt($client->curl, CURLOPT_CUSTOMREQUEST, 'HEAD');
     curl_setopt($client->curl, CURLOPT_FOLLOWLOCATION, false);
+    break;
+
+    case 'POST':
+    curl_setopt($client->curl, CURLOPT_POST, true);
+    curl_setopt($client->curl, CURLOPT_POSTFIELDS, file_get_contents('php://input'));
+    break;
+
+    case 'DELETE':
+    curl_setopt($client->curl, CURLOPT_CUSTOMREQUEST, 'DELETE');
+    break;
+
+    case 'PUT':
+    // TODO
+    break;
   }
 
   /* output file */
@@ -111,9 +136,9 @@ if ($info['http_code'] >= 400) {
   exit();
 }
 
-if ($method === 'GET') {
+//if ($method === 'GET' || $method === 'POST') {
   readfile('compress.zlib://' . $file);
-}
+//}
 
 function readConfig($url) {
   $configFile = __DIR__ . '/config.json';
@@ -144,6 +169,10 @@ function buildFilePath($method, $url) {
 
   if (!file_exists($dir)) {
     mkdir($dir, 0700, true);
+  }
+
+  if ($method == 'POST') {
+    $url .= file_get_contents('php://input');
   }
 
   return $dir . '/' . hash('sha256', $url);
