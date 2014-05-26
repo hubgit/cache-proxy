@@ -74,6 +74,7 @@ $info = json_decode(file_get_contents($file . '.json'), true);
 
 $exposedHeaders = array(
   'link',
+  'content-location',
   'x-status',
   'x-location',
   'x-ratelimit-limit',
@@ -95,7 +96,7 @@ if ($info['redirect_url']) {
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Expose-Headers: ' . implode(', ', $exposedHeaders));
-
+header('Content-Location: ' . $info['url']);
 //header('Content-Length: ' . filesize($file));
 
 foreach ($info['headers'] as $key => $value) {
