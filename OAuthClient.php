@@ -3,7 +3,7 @@
 class OAuthClient extends CurlClient {
 	public function authorizationHeader($config) {
 		if (!$config['access_token']) {
-			$this->fetchAccessToken($config);
+			$this->accessToken($config);
 			http_response_code(500);
 			exit();
 		}
