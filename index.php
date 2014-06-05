@@ -34,7 +34,7 @@ $headers = getallheaders();
 
 $nocache = isset($headers['Vege-Cache-Control']) && ($headers['Vege-Cache-Control'] == 'no-cache');
 
-if ($nocache || (!file_exists($file) || !file_exists($file . '.json') || !filesize($file))) {
+if ($nocache || (!file_exists($file) || !file_exists($file . '.json') || filesize($file) < 50)) {
   /* pass through request headers */
   $requestHeaders = array_map(function($value, $key) {
     $key = strtolower($key);
