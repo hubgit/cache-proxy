@@ -1,5 +1,7 @@
 <?php
 
+ini_set('display_errors', false);
+
 require 'CurlClient.php';
 require 'OAuthClient.php';
 
@@ -26,9 +28,14 @@ switch ($method) {
     exit();
 }
 
+if (!isset($_GET['url'])) {
+  throw new Exception('No URL');
+}
+
 $url = $_GET['url'];
 
 $file = buildFilePath($method, $url);
+//print "$file\n"; exit();
 
 $headers = getallheaders();
 
@@ -156,6 +163,10 @@ function readConfig($url) {
 
 function buildFilePath($method, $url) {
   $parts = parse_url($url);
+
+  if (!in_array($parts['scheme'], array('http', 'https'))) {
+    throw new Exception('URL must be HTTP or HTTPS');
+  }
 
   $host = $parts['host'];
 
