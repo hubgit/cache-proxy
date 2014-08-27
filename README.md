@@ -3,4 +3,4 @@ cache-proxy
 
 ## Usage
 
-`php -S localhost:9200`
+`./proxy.sh`
