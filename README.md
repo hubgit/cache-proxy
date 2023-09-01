@@ -3,4 +3,6 @@ cache-proxy
 
 ## Usage
 
-`./proxy.sh`
+```shell
+./proxy.sh
+```
