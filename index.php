@@ -13,7 +13,7 @@ switch ($method) {
   case 'OPTIONS':
     header('Access-Control-Allow-Origin: *');
     header('Access-Control-Allow-Methods: GET, HEAD, POST, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: accept, x-requested-with, content-type, vege-cache-control, vege-follow');
+    header('Access-Control-Allow-Headers: accept, x-requested-with, content-type, vege-cache-control, vege-follow, vege-user-agent');
     exit();
 
   case 'GET':
@@ -45,6 +45,10 @@ if ($nocache || (!file_exists($file) || !file_exists($file . '.json') || filesiz
   /* pass through request headers */
   $requestHeaders = array_map(function($value, $key) {
     $key = strtolower($key);
+
+    if ($key == 'vege-user-agent') {
+        return 'User-Agent: ' . $value;
+    }
 
     if (!in_array($key, array('origin', 'referer', 'connection', 'host', 'accept-encoding', 'dnt', 'vege-cache-control', 'vege-follow'))) {
       return $key . ': ' . $value;
